@@ -146,29 +146,49 @@
 
             const config = { 
                 fps: 20, 
-                qrbox: { width: 280, height: 180 },
-                formatsToSupport: [ 
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    // Dynamically adjust the qrbox size based on the viewfinder dimensions
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    return { width: minEdge * 0.8, height: minEdge * 0.4 };
+                },
+                formatsToSupport: [
                     Html5QrcodeSupportedFormats.CODE_128, 
                     Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.CODE_39
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.DATA_MATRIX
                 ]
             };
 
-            // TRY #1: Start with Back Camera (Environment)
+            // Add detailed logs for debugging
+            console.log("Initializing barcode scanner...");
+
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
             .then(() => { 
+                console.log("Scanner started successfully. Camera feed is active.");
                 statusText.innerText = "🛑 Stop Scanner"; 
                 document.getElementById('camera-icon').innerText = "▲";
             })
             .catch(err => { 
-                console.warn("Environment cam failed, trying fallback...", err);
-                // TRY #2: Fallback to any available camera if the environment flag fails
+                console.error("Environment camera failed:", err);
                 html5QrCode.start({ facingMode: "user" }, config, onScanSuccess)
-                .then(() => { statusText.innerText = "🛑 Stop (Front Cam Mode)"; })
+                .then(() => { 
+                    console.log("Fallback to front camera succeeded. Camera feed is active.");
+                    statusText.innerText = "🛑 Stop (Front Cam Mode)"; 
+                })
                 .catch(err2 => {
-                    alert("Fatal Cam Error: Please ensure you are on HTTPS and granted permissions.");
+                    console.error("Both cameras failed:", err2);
+                    alert("Camera Error: Ensure HTTPS is used and permissions are granted. If the issue persists, try another browser or device.");
                     cameraRunning = false; container.style.display = "none"; header.classList.remove('active'); statusText.innerText = "📷 Start Scanner";
                 });
+            });
+
+            // Log each frame processed
+            html5QrCode.setOnFrameProcessed((frame) => {
+                console.log("Processing frame:", frame);
             });
         } else {
             cameraRunning = false; container.style.display = "none"; header.classList.remove('active'); statusText.innerText = "📷 Start Scanner";
@@ -179,14 +199,37 @@
     }
 
     function onScanSuccess(bc) {
-        document.getElementById('search-results').innerHTML = ""; document.getElementById('manual-search').value = "";
+        clearTimeout(scanTimeout); // Clear any existing timeout
+        document.getElementById('search-results').innerHTML = ""; 
+        document.getElementById('manual-search').value = "";
         document.getElementById('barcode-result').value = bc;
         const itm = masterInventory[bc];
         const det = document.getElementById('item-details');
         det.innerHTML = itm ? `<div class="detail-box"><strong>${itm.name}</strong><br>Record: ${itm.systemQty}</div>` : `<div class="detail-box" style="background:#fff1f2; color:#991b1b;">Not in list (${bc})</div>`;
         if (navigator.vibrate) navigator.vibrate(100);
-        html5QrCode.pause(true); setTimeout(() => { if(cameraRunning) html5QrCode.resume(); }, 2000);
+        html5QrCode.pause(true); 
+        setTimeout(() => { if(cameraRunning) html5QrCode.resume(); }, 2000);
     }
+
+    function onScanFailure() {
+        console.warn("No barcode detected. Ensure the barcode is visible and well-lit.");
+        document.getElementById('item-details').innerHTML = `<div class="detail-box" style="background:#fff1f2; color:#991b1b;">No barcode detected. Please try again.</div>`;
+    }
+
+    // Set a timeout to show a fallback message if no barcode is detected
+    scanTimeout = setTimeout(onScanFailure, 10000); // 10 seconds fallback
+
+    // Debug overlay to ensure barcode visibility
+    const debugOverlay = document.createElement('div');
+    debugOverlay.style.position = 'absolute';
+    debugOverlay.style.top = '0';
+    debugOverlay.style.left = '0';
+    debugOverlay.style.width = '100%';
+    debugOverlay.style.height = '100%';
+    debugOverlay.style.border = '2px dashed red';
+    debugOverlay.style.pointerEvents = 'none';
+    debugOverlay.style.zIndex = '1000';
+    document.getElementById('camera-container').appendChild(debugOverlay);
 
     function searchItems() {
         const q = document.getElementById('manual-search').value.toLowerCase();
