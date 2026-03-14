@@ -123,19 +123,60 @@
         updateDashboard(); updateHistoryTable();
     }
 
-    function toggleCamera() {
-        const container = document.getElementById('camera-container'), header = document.getElementById('camera-toggle'), statusText = document.getElementById('camera-status-text');
-        if (!cameraRunning) {
-            cameraRunning = true; container.style.display = "block"; header.classList.add('active'); statusText.innerText = "⌛ Accessing...";
-            html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: 250 }, onScanSuccess)
-            .then(() => { statusText.innerText = "🛑 Stop Scanner"; document.getElementById('camera-icon').innerText = "▲"; })
-            .catch(err => { alert("Cam Error: " + err); toggleCamera(); });
-        } else {
-            cameraRunning = false; container.style.display = "none"; header.classList.remove('active'); statusText.innerText = "📷 Open Scanner";
-            if (html5QrCode) html5QrCode.stop();
-        }
+  function toggleCamera() {
+    const container = document.getElementById('camera-container'), 
+          header = document.getElementById('camera-toggle'), 
+          statusText = document.getElementById('camera-status-text');
+
+    if (!cameraRunning) {
+        cameraRunning = true; 
+        container.style.display = "block"; 
+        header.classList.add('active'); 
+        statusText.innerText = "⌛ Calibrating Lens...";
+
+        html5QrCode = new Html5Qrcode("reader");
+        
+        // PRO CONFIG: High FPS and specific constraints for better recognition
+        const config = { 
+            fps: 20, // Faster scanning
+            qrbox: { width: 280, height: 200 }, // Larger scan window
+            aspectRatio: 1.0,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true // Uses phone's built-in AI if available
+            }
+        };
+
+        html5QrCode.start(
+            { facingMode: "environment" }, // Forces BACK camera
+            config, 
+            onScanSuccess
+        )
+        .then(() => { 
+            statusText.innerText = "🛑 Stop Scanner"; 
+            document.getElementById('camera-icon').innerText = "▲"; 
+            
+            // Apply Focus & Zoom if the phone supports it
+            const track = html5QrCode.getRunningTrack();
+            const capabilities = track.getCapabilities();
+            if (capabilities.focusMode) {
+                track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+            }
+        })
+        .catch(err => { 
+            alert("Cam Error: Check Permissions or lighting."); 
+            cameraRunning = false;
+            container.style.display = "none";
+            header.classList.remove('active');
+            statusText.innerText = "📷 Open Scanner";
+        });
+    } else {
+        cameraRunning = false; 
+        container.style.display = "none"; 
+        header.classList.remove('active'); 
+        statusText.innerText = "📷 Open Scanner";
+        if (html5QrCode) html5QrCode.stop().catch(() => {});
     }
+}
 
     function onScanSuccess(bc) {
         document.getElementById('search-results').innerHTML = ""; document.getElementById('manual-search').value = "";
