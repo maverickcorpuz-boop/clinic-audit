@@ -3,39 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Clinic Audit Pro | Cam-Fixed</title>
+    <title>Clinic Audit Pro | Universal Scan</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; padding: 15px; -webkit-font-smoothing: antialiased; }
         .container { max-width: 500px; margin: auto; padding-bottom: 40px; }
-        .card { background: #ffffff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: relative;}
+        .card { background: #ffffff; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); position: relative; }
         .card-title { font-size: 13px; font-weight: 700; margin-bottom: 15px; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; }
         .form-group { margin-bottom: 16px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         label { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px; }
         input, select { width: 100%; padding: 12px 14px; font-size: 16px; border: 1.5px solid #e2e8f0; border-radius: 10px; background-color: #f8fafc; box-sizing: border-box; }
-        #search-results { position: absolute; width: calc(100% - 40px); z-index: 100; background: white; border-radius: 0 0 10px 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; max-height: 200px; overflow-y: auto; }
-        .search-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-        .camera-toggle-header { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; cursor: pointer; margin-top: 12px; }
+        
+        /* Scanner UI */
+        .camera-toggle-header { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; cursor: pointer; margin-top: 12px; font-weight: 600; }
         .camera-toggle-header.active { border-color: #f59e0b; background: #fffbeb; color: #b45309; }
-        #camera-container { display: none; overflow: hidden; margin-top: 10px;}
-        #reader { width: 100%; background: #000; border-radius: 12px; min-height: 280px; }
-        .btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 600; border-radius: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; color: white; }
-        .btn-primary { background-color: #3b82f6; }
-        .btn-success { background-color: #10b981; }
-        .btn-outline { background-color: transparent; border: 1.5px solid #e2e8f0; color: #64748b; font-size: 13px; margin-top: 10px; }
+        #camera-container { display: none; overflow: hidden; margin-top: 10px; border-radius: 12px; border: 3px solid #3b82f6; position: relative; }
+        #reader { width: 100%; background: #000; min-height: 350px; }
+        
+        /* Scan Overlay */
+        .scan-line { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; background: rgba(239, 68, 68, 0.7); box-shadow: 0 0 10px 2px rgba(239, 68, 68, 0.5); z-index: 10; pointer-events: none; animation: scanAnim 2s infinite ease-in-out; }
+        @keyframes scanAnim { 0%, 100% { transform: translateY(-40px); } 50% { transform: translateY(40px); } }
+
         .session-info-bar { background: #0f172a; color: #e2e8f0; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; font-size: 11px; }
         .dash-stats { display: flex; justify-content: space-between; margin-bottom: 15px; text-align: center; }
         .stat-num { font-size: 20px; font-weight: 800; color: #0f172a; }
         .stat-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; }
         .progress-wrapper { background: #e2e8f0; border-radius: 10px; height: 8px; overflow: hidden; }
         #dash-progress-bar { background: #3b82f6; height: 100%; width: 0%; transition: width 0.6s ease; }
+        
+        .btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 600; border-radius: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; color: white; }
+        .btn-primary { background-color: #3b82f6; }
+        .btn-success { background-color: #10b981; }
+        
+        #search-results { position: absolute; width: calc(100% - 40px); z-index: 100; background: white; border: 1px solid #e2e8f0; max-height: 200px; overflow-y: auto; }
+        .search-item { padding: 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
         .detail-box { padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 500; margin-top: 15px; border-left: 4px solid #3b82f6; background: #eff6ff; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
         .variance-neg { color: #e11d48; font-weight: 800; }
     </style>
 </head>
 <body>
+
 <div class="container">
     <div id="setup-module">
         <div class="card">
@@ -47,7 +58,6 @@
             <div class="form-group">
                 <label>Master List (.CSV)</label>
                 <input type="file" id="csv-upload" accept=".csv" onchange="loadMasterList(event)">
-                <div id="upload-status" style="font-size: 12px; color: #64748b; margin-top: 8px;">Upload master list to unlock.</div>
             </div>
             <button id="begin-audit-btn" class="btn btn-primary" onclick="enterAuditMode()" style="opacity: 0.5;" disabled>🚀 Begin Session</button>
         </div>
@@ -59,6 +69,7 @@
             <span>Auditor: <strong id="info-auditor">-</strong></span>
             <span onclick="exitAuditMode()" style="color:#ef4444; cursor:pointer; font-weight:700;">EXIT</span>
         </div>
+
         <div class="card">
             <div class="dash-stats">
                 <div class="stat-box"><div class="stat-num" id="dash-total">0</div><div class="stat-label">Total</div></div>
@@ -68,20 +79,25 @@
             </div>
             <div class="progress-wrapper"><div id="dash-progress-bar"></div></div>
         </div>
+
         <div class="card">
-            <div style="position: relative;"><input type="text" id="manual-search" placeholder="🔍 Search item..." onkeyup="searchItems()" autocomplete="off"><div id="search-results"></div></div>
-            <div id="camera-toggle" class="camera-toggle-header" onclick="toggleCamera()"><span id="camera-status-text">📷 Open Scanner</span><span id="camera-icon">▼</span></div>
-            <div id="camera-container"><div id="reader"></div></div>
+            <div style="position: relative;"><input type="text" id="manual-search" placeholder="🔍 Search item name..." onkeyup="searchItems()" autocomplete="off"><div id="search-results"></div></div>
+            <div id="camera-toggle" class="camera-toggle-header" onclick="toggleCamera()"><span id="camera-status-text">📷 Start Scanner</span><span id="camera-icon">▼</span></div>
+            <div id="camera-container">
+                <div class="scan-line"></div>
+                <div id="reader"></div>
+            </div>
             <div id="item-details"></div>
-            <div class="form-group" style="margin-top:10px;"><label>Zone</label><input type="text" id="scan-zone" placeholder="Fridge/Shelf"></div>
+            <div class="form-group" style="margin-top:15px;"><label>Zone</label><input type="text" id="scan-zone" placeholder="Fridge/Shelf"></div>
             <div class="grid-2 form-group"><div><label>Barcode</label><input type="text" id="barcode-result" readonly></div><div><label>Qty</label><input type="number" id="physical-qty"></div></div>
             <div class="grid-2 form-group"><div><label>Condition</label><select id="item-condition"><option value="Good">✅ Good</option><option value="Damaged">❌ Damaged</option></select></div><div><label>Expiry</label><input type="date" id="expiry-date"></div></div>
             <button class="btn btn-primary" onclick="saveAuditEntry()">💾 Save Entry</button>
         </div>
+
         <div class="card">
             <div style="overflow-x: auto;"><table><thead><tr><th>Item</th><th>Sys</th><th>Phy</th><th>Var</th></tr></thead><tbody id="history-body"></tbody></table></div>
-            <button class="btn btn-success" onclick="downloadCSV()" style="margin-top:20px;">⬇ Export CSV</button>
-            <button class="btn btn-outline btn-danger" onclick="clearData()">⚠ Wipe Data</button>
+            <button class="btn btn-success" onclick="downloadCSV()" style="margin-top:20px;">⬇ Export CSV Report</button>
+            <button class="btn btn-outline" onclick="clearData()" style="color:#ef4444; border-color:#ef4444; margin-top:10px;">⚠ Clear Session</button>
         </div>
     </div>
 </div>
@@ -97,96 +113,79 @@
             const lines = e.target.result.split('\n');
             let tempInv = {};
             for (let i = 1; i < lines.length; i++) {
-                const row = lines[i].trim(); if(!row) continue;
-                const cols = row.split(',');
+                const cols = lines[i].split(',');
                 if (cols.length >= 3) {
                     const bc = cols[0].trim();
-                    const qty = parseInt(cols[2]) || 0;
-                    if (tempInv[bc]) tempInv[bc].systemQty += qty;
-                    else tempInv[bc] = { name: cols[1].trim(), systemQty: qty };
+                    tempInv[bc] = { name: cols[1].trim(), systemQty: parseInt(cols[2]) || 0 };
                 }
             }
             masterInventory = tempInv;
-            document.getElementById('upload-status').innerHTML = `<span style="color:#10b981; font-weight:700;">✔ ${Object.keys(masterInventory).length} SKUs Ready.</span>`;
-            document.getElementById('begin-audit-btn').style.opacity = "1";
-            document.getElementById('begin-audit-btn').disabled = false;
+            document.getElementById('begin-audit-btn').style.opacity = "1"; document.getElementById('begin-audit-btn').disabled = false;
         };
         reader.readAsText(file);
     }
 
     function enterAuditMode() {
         const b = document.getElementById('branch-name').value, a = document.getElementById('auditor-name').value;
-        if (!b || !a) return alert("Fill in Branch and Auditor!");
+        if (!b || !a) return alert("Setup required!");
         localStorage.setItem('clinic_branch_name', b); localStorage.setItem('clinic_auditor_name', a);
         document.getElementById('info-branch').innerText = b; document.getElementById('info-auditor').innerText = a;
         document.getElementById('setup-module').style.display = "none"; document.getElementById('audit-module').style.display = "block";
         updateDashboard(); updateHistoryTable();
     }
 
-  function toggleCamera() {
-    const container = document.getElementById('camera-container'), 
-          header = document.getElementById('camera-toggle'), 
-          statusText = document.getElementById('camera-status-text');
-
-    if (!cameraRunning) {
-        cameraRunning = true; 
-        container.style.display = "block"; 
-        header.classList.add('active'); 
-        statusText.innerText = "⌛ Calibrating Lens...";
-
-        html5QrCode = new Html5Qrcode("reader");
+    /* --- FAIL-SAFE SCANNER LOGIC --- */
+    function toggleCamera() {
+        const container = document.getElementById('camera-container'), header = document.getElementById('camera-toggle'), statusText = document.getElementById('camera-status-text');
         
-        // PRO CONFIG: High FPS and specific constraints for better recognition
-        const config = { 
-            fps: 20, // Faster scanning
-            qrbox: { width: 280, height: 200 }, // Larger scan window
-            aspectRatio: 1.0,
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true // Uses phone's built-in AI if available
-            }
-        };
-
-        html5QrCode.start(
-            { facingMode: "environment" }, // Forces BACK camera
-            config, 
-            onScanSuccess
-        )
-        .then(() => { 
-            statusText.innerText = "🛑 Stop Scanner"; 
-            document.getElementById('camera-icon').innerText = "▲"; 
+        if (!cameraRunning) {
+            cameraRunning = true; container.style.display = "block"; header.classList.add('active'); statusText.innerText = "⌛ Starting...";
             
-            // Apply Focus & Zoom if the phone supports it
-            const track = html5QrCode.getRunningTrack();
-            const capabilities = track.getCapabilities();
-            if (capabilities.focusMode) {
-                track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+            // Re-initialize library
+            html5QrCode = new Html5Qrcode("reader");
+
+            const config = { 
+                fps: 20, 
+                qrbox: { width: 280, height: 180 },
+                formatsToSupport: [ 
+                    Html5QrcodeSupportedFormats.CODE_128, 
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.CODE_39
+                ]
+            };
+
+            // TRY #1: Start with Back Camera (Environment)
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .then(() => { 
+                statusText.innerText = "🛑 Stop Scanner"; 
+                document.getElementById('camera-icon').innerText = "▲";
+            })
+            .catch(err => { 
+                console.warn("Environment cam failed, trying fallback...", err);
+                // TRY #2: Fallback to any available camera if the environment flag fails
+                html5QrCode.start({ facingMode: "user" }, config, onScanSuccess)
+                .then(() => { statusText.innerText = "🛑 Stop (Front Cam Mode)"; })
+                .catch(err2 => {
+                    alert("Fatal Cam Error: Please ensure you are on HTTPS and granted permissions.");
+                    cameraRunning = false; container.style.display = "none"; header.classList.remove('active'); statusText.innerText = "📷 Start Scanner";
+                });
+            });
+        } else {
+            cameraRunning = false; container.style.display = "none"; header.classList.remove('active'); statusText.innerText = "📷 Start Scanner";
+            if (html5QrCode) {
+                html5QrCode.stop().catch(e => console.log("Stop error ignored."));
             }
-        })
-        .catch(err => { 
-            alert("Cam Error: Check Permissions or lighting."); 
-            cameraRunning = false;
-            container.style.display = "none";
-            header.classList.remove('active');
-            statusText.innerText = "📷 Open Scanner";
-        });
-    } else {
-        cameraRunning = false; 
-        container.style.display = "none"; 
-        header.classList.remove('active'); 
-        statusText.innerText = "📷 Open Scanner";
-        if (html5QrCode) html5QrCode.stop().catch(() => {});
+        }
     }
-}
 
     function onScanSuccess(bc) {
         document.getElementById('search-results').innerHTML = ""; document.getElementById('manual-search').value = "";
         document.getElementById('barcode-result').value = bc;
-        const item = masterInventory[bc];
+        const itm = masterInventory[bc];
         const det = document.getElementById('item-details');
-        det.innerHTML = item ? `<div class="detail-box"><strong>${item.name}</strong><br>Record: ${item.systemQty}</div>` : `<div class="detail-box" style="background:#fff1f2; color:#991b1b;">Unknown Barcode</div>`;
+        det.innerHTML = itm ? `<div class="detail-box"><strong>${itm.name}</strong><br>Record: ${itm.systemQty}</div>` : `<div class="detail-box" style="background:#fff1f2; color:#991b1b;">Not in list (${bc})</div>`;
         if (navigator.vibrate) navigator.vibrate(100);
-        html5QrCode.pause(true);
-        setTimeout(() => { if(cameraRunning) html5QrCode.resume(); }, 2000);
+        html5QrCode.pause(true); setTimeout(() => { if(cameraRunning) html5QrCode.resume(); }, 2000);
     }
 
     function searchItems() {
@@ -201,18 +200,18 @@
 
     function saveAuditEntry() {
         const bc = document.getElementById('barcode-result').value, qty = parseInt(document.getElementById('physical-qty').value);
-        if (!bc || isNaN(qty)) return alert("Scan/Search and set Qty!");
+        if (!bc || isNaN(qty)) return alert("Missing data!");
         let cond = document.getElementById('item-condition').value; const exp = document.getElementById('expiry-date').value;
         if (exp && new Date(exp) < new Date().setHours(0,0,0,0)) cond = "Expired";
-        const item = masterInventory[bc];
+        const itm = masterInventory[bc];
         const idx = auditTrail.findIndex(e => e.barcode === bc);
         if (idx !== -1) {
             let e = auditTrail[idx]; e.physical += qty; e.variance = e.physical - e.system;
-            if (cond === "Expired") e.expiredQty = (e.expiredQty || 0) + qty;
-            else if (cond === "Damaged") e.damagedQty = (e.damagedQty || 0) + qty;
+            if (cond === "Expired") e.expQty = (e.expQty || 0) + qty;
+            else if (cond === "Damaged") e.dmgQty = (e.dmgQty || 0) + qty;
             else e.goodQty = (e.goodQty || 0) + qty;
         } else {
-            auditTrail.unshift({ barcode: bc, name: item ? item.name : "Unknown", system: item ? item.systemQty : 0, physical: qty, goodQty: cond === "Good" ? qty : 0, damagedQty: cond === "Damaged" ? qty : 0, expiredQty: cond === "Expired" ? qty : 0, variance: qty - (item ? item.systemQty : 0), date: new Date().toLocaleDateString(), branch: localStorage.getItem('clinic_branch_name'), auditor: localStorage.getItem('clinic_auditor_name'), expiry: exp || "N/A", locations: document.getElementById('scan-zone').value || "Gen" });
+            auditTrail.unshift({ barcode: bc, name: itm ? itm.name : "Unknown", system: itm ? itm.systemQty : 0, physical: qty, goodQty: cond === "Good" ? qty : 0, dmgQty: cond === "Damaged" ? qty : 0, expQty: cond === "Expired" ? qty : 0, variance: qty - (itm ? itm.systemQty : 0), date: new Date().toLocaleDateString(), loc: document.getElementById('scan-zone').value || "Gen" });
         }
         localStorage.setItem('clinic_audit_data', JSON.stringify(auditTrail));
         updateDashboard(); updateHistoryTable();
@@ -231,11 +230,11 @@
     }
 
     function downloadCSV() {
-        let csv = "Item Name,Barcode,Sys Qty,Good Qty,Damaged Qty,Expired Qty,Total Phys,Var,Loc,Date\n";
+        let csv = "Name,Barcode,Sys,Good,Damaged,Expired,Total,Var,Loc,Date\n";
         let scanned = new Set();
-        auditTrail.forEach(r => { scanned.add(r.barcode.toString()); csv += `"${r.name}",${r.barcode},${r.system},${r.goodQty || 0},${r.damagedQty || 0},${r.expiredQty || 0},${r.physical},${r.variance},"${r.locations}","${r.date}"\n`; });
+        auditTrail.forEach(r => { scanned.add(r.barcode.toString()); csv += `"${r.name}",${r.barcode},${r.system},${r.goodQty || 0},${r.dmgQty || 0},${r.expQty || 0},${r.physical},${r.variance},"${r.loc}","${r.date}"\n`; });
         for (let bc in masterInventory) if (!scanned.has(bc.toString())) csv += `"${masterInventory[bc].name}",${bc},${masterInventory[bc].systemQty},0,0,0,0,${-masterInventory[bc].systemQty},"MISSING","N/A"\n`;
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `Report_${localStorage.getItem('clinic_branch_name')}.csv`; a.click();
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `Audit_Report.csv`; a.click();
     }
     function exitAuditMode() { if(confirm("Exit?")) { if(cameraRunning) toggleCamera(); document.getElementById('setup-module').style.display = "block"; document.getElementById('audit-module').style.display = "none"; } }
     function clearData() { if(confirm("Clear All?")) { auditTrail = []; localStorage.removeItem('clinic_audit_data'); updateDashboard(); updateHistoryTable(); } }
